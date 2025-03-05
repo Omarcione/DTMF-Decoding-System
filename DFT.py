@@ -48,9 +48,12 @@ def DFT(x: list[int], N: int) -> list[dict[str, float]]:
     return X
 
 
-def Magnitude(X: list[dict[str, float]]) -> None:
+def Magnitude(X: list[dict[str, float]]) -> list[float]:
+    mags = []
     for k in X:
         k["magnitude"] = sqrt(k["real"]**2 + k["imag"]**2)
+        mags.append(k["magnitude"])
+    return mags
 
 ############################################
 ############################################

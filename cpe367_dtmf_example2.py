@@ -55,6 +55,11 @@ def process_wav(fpath_sig_in):
 
 	cnt = 0
 	N = 10
+	C = 1024
+	for value in h.values():
+		for i in value:
+			i = i * C
+			i = int(i)
 	y = {
 		1209 : fifo(N),
 		1336 : fifo(N),
@@ -76,7 +81,11 @@ def process_wav(fpath_sig_in):
 		########################
 		# students: evaluate each filter and implement other processing blocks
 		for freq in y.keys():
-			y[freq].update(h[freq][0] * xin + h[freq][1] * y[freq].get(1) + h[freq][2] * y[freq].get(2))
+			y[freq].update((h[freq][0] * xin + h[freq][1] * y[freq].get(1) + h[freq][2] * y[freq].get(2))/C)
+
+		########################
+		# students: combine results from filtering stages
+		#  and find (best guess of) symbol that is present at this sample time
 		if cnt % N == 0 and cnt != 0:
 			Y_DFT = []
 
@@ -87,18 +96,6 @@ def process_wav(fpath_sig_in):
 			peaks = [0, 0]
 			Y_DFT.sort(key=lambda x: x[1], reverse=True) #sort by magnitudes
 			peaks[0], peaks[1] = Y_DFT[0][0], Y_DFT[1][0] #peaks are the 2 highest magnitudes
-
-
-
-
-
-
-
-
-		########################
-		# students: combine results from filtering stages
-		#  and find (best guess of) symbol that is present at this sample time
-
 
 		# pass through all filters
 

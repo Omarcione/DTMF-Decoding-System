@@ -39,21 +39,25 @@ def read_signal(fpath_wav_in: str, N: int) -> list[int] | bool:
     return wave
 
 def DFT(x: list[int], N: int) -> list[dict[str, float]]:
-    X = [{"real" : 0, "imag" : 0, "magnitude" : 0} for _ in range(N)]
+    X = [{"real" : 0.0, "imag" : 0.0} for _ in range(N)]
     for k in range(N):
+        real = 0.0
+        imag = 0.0
         for n in range(N):
-            X[k]["real"] += 1/N * x[n] * cos((2 * pi * k * n)/N)
-            X[k]["imag"] += 1/N * x[n] * sin((2 * pi * k * n)/N)
+            angle = (2 * pi * k * n) / N
+            real += x[n] * cos(angle)
+            imag += x[n] * sin(angle)
+
+        X[k]["real"] = real / N
+        X[k]["imag"] = imag / N
 
     return X
 
 
 def Magnitude(X: list[dict[str, float]]) -> list[float]:
-    mags = []
-    for k in X:
-        k["magnitude"] = sqrt(k["real"]**2 + k["imag"]**2)
-        mags.append(k["magnitude"])
-    return mags
+    print([(k["real"], k["imag"]) for k in X])  # Convert generator to a list
+    return [(sqrt(k["real"]**2 + k["imag"]**2)) for k in X]
+
 
 ############################################
 ############################################
@@ -72,15 +76,14 @@ def main():
     N= 4000
     xn = read_signal(fpath_wav_in, N) #get x[n]
     X = DFT(xn, N) #take DFT
-    Magnitude(X) #compute magnitude for each X[k]
+    magnitudes = Magnitude(X) #compute magnitude for each X[k]
 
     fs = 8000 #sampling rate
-    mag_values = [X[k]["magnitude"] for k in range(1, 2000)] #list of magnitudes
     freq_axis = [k * fs//N for k in range(1,2000)]
 
     plt.plot(xn)
     plt.show()
-    plt.plot(freq_axis, mag_values)
+    plt.plot(freq_axis, magnitudes)
     plt.xlabel("Frequency")
     plt.ylabel("Magnitude")
     plt.title("Magnitude Spectrum")

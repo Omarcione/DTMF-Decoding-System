@@ -80,7 +80,16 @@ def process_wav(fpath_sig_in):
 		# students: evaluate each filter and implement other processing blocks
 		# pass through all filters
 		for freq in y.keys():
-			y[freq].update((h[freq][0] * xin + h[freq][1] * y[freq].get(1) + h[freq][2] * y[freq].get(2)) / C)
+			# changed y[freq].get to 0 and 1 instead of 1 and 2
+			if n_curr < 50:
+				update_val = (h[freq][0] * xin + h[freq][1] * y[freq].get(0) + h[freq][2] * y[freq].get(1)) / C
+				print("freq: ", freq)
+				print("xin:", xin)
+				print("y-1:", y[freq].get(0))
+				print("y-2:", y[freq].get(1))
+				print(update_val)
+				y[freq].update(update_val)
+				print(y[freq].buff)
 
 		########################
 		# students: combine results from filtering stages
@@ -97,6 +106,8 @@ def process_wav(fpath_sig_in):
 			high_candidates = [(freq, mag) for freq, mag in Y_DFT if valid_high_freqs[-1] >= freq >= valid_high_freqs[0]]
 
 			# peaks are the 2 highest magnitudes
+			print("low candidates: ", low_candidates)
+			print("high candidates: ", high_candidates)
 			low_freq = max(low_candidates, key=lambda x: x[1])[0] #low freq with the highest magnitude
 			high_freq = max(high_candidates, key=lambda x: x[1])[0] #high freq w the highest magnitude
 			print(f"Detected frequencies: low={low_freq}, high={high_freq}")

@@ -55,8 +55,10 @@ def DFT(x: list[int], N: int) -> list[dict[str, float]]:
 
 
 def Magnitude(X: list[dict[str, float]]) -> list[float]:
-    print([(k["real"], k["imag"]) for k in X])  # Convert generator to a list
-    return [(sqrt(k["real"]**2 + k["imag"]**2)) for k in X]
+    # print([(k["real"], k["imag"]) for k in X])  # Convert generator to a list
+    # return [(sqrt(int(k["real"])**2 + int(k["imag"])**2)) for k in X]
+    result = [abs(complex(k["real"], k["imag"])) for k in X]
+    return result
 
 
 ############################################

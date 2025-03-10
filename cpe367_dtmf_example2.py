@@ -27,35 +27,26 @@ def process_wav(fpath_sig_in):
 	########################
 	# students: setup filters
 	# filter freq response coefficients
-	#H[F] = (a0,b1,b2)
 	h = {
 		#ROWS
-		697: (1, -0.877, 0.932),
-		770: (1, -0.686, 0.94),
-		852: (1, -0.442, 0.925),
-		941: (1, -0.18, 0.910),
+		697: (1, -0.885, 0.930, 0.034),
+		770: (1, -0.686, 0.94, 0.030),
+		852: (1, -0.442, 0.925, 0.037),
+		941: (1, -0.18, 0.910, 0.045),
 		# COLS
-		1209: (1, 0.591, 0.822),
-		1336: (1, 0.906, 0.827),
-		1447: (1, 1.214, 0.77),
-		1633: (1, 1.532, 0.83)
+		1209: (1, 0.625, 0.938, 0.089),
+		1336: (1, 0.976, 0.939, 0.087),
+		1477: (1, 1.252, 0.939, 0.115),
+		1633: (1, 1.626, 0.940, 0.085)
 	}
 
-	N = 10
+	N = 32
 	C = 1024
 
-	h = {freq: tuple(int(i * C) for i in coeffs) for freq, coeffs in h.items()}
+	h = {freq: tuple(int(round(i * C)) for i in coeffs) for freq, coeffs in h.items()} #scale to large int
 
-	y = {
-		1209: fifo(N),
-		1336: fifo(N),
-		1447: fifo(N),
-		1633: fifo(N),
-		697: fifo(N),
-		770: fifo(N),
-		852: fifo(N),
-		941: fifo(N),
-	}
+	#fifos for filter outputs
+	y = {key : fifo(N * 1) for key in h.keys()}
 
 	symbols = {
 		(697, 1209): '1', (697, 1336): '2', (697, 1477): '3', (697, 1633): 'A',
@@ -68,9 +59,9 @@ def process_wav(fpath_sig_in):
 	valid_high_freqs = list(h.keys())[4:]
 
 	# process input
-	xin = 0
 	low_freq = 0
 	high_freq = 0
+
 	for n_curr in range(s2.get_len()):
 
 		# read next input sample from the signal analyzer
@@ -81,20 +72,25 @@ def process_wav(fpath_sig_in):
 		# pass through all filters
 		for freq in y.keys():
 			# changed y[freq].get to 0 and 1 instead of 1 and 2
-			if n_curr < 50:
-				update_val = (h[freq][0] * xin + h[freq][1] * y[freq].get(0) + h[freq][2] * y[freq].get(1)) / C
-				print("freq: ", freq)
-				print("xin:", xin)
-				print("y-1:", y[freq].get(0))
-				print("y-2:", y[freq].get(1))
-				print(update_val)
+			if True:
+				update_val = (h[freq][0] * xin
+				              - (h[freq][1]) * y[freq].get(0)
+				              - (h[freq][2]) * y[freq].get(1)
+				              )
+				update_val /= C # unscale
+				# print("freq: ", freq)
+				# print("Coefficients:", [i / C for i in h[freq]])
+				# print("xin:", xin)
+				# print("y-1:", y[freq].get(0))
+				# print("y-2:", y[freq].get(1))
+				# print(update_val)
 				y[freq].update(update_val)
-				print(y[freq].buff)
+				# print(y[freq].buff)
 
 		########################
 		# students: combine results from filtering stages
 		#  and find (best guess of) symbol that is present at this sample time
-		if n_curr % N == 0 and n_curr != 0:
+		if n_curr % (N//4) == 0 and n_curr != 0:
 			Y_DFT = []
 
 			for freq in y.keys():
@@ -106,11 +102,11 @@ def process_wav(fpath_sig_in):
 			high_candidates = [(freq, mag) for freq, mag in Y_DFT if valid_high_freqs[-1] >= freq >= valid_high_freqs[0]]
 
 			# peaks are the 2 highest magnitudes
-			print("low candidates: ", low_candidates)
-			print("high candidates: ", high_candidates)
-			low_freq = max(low_candidates, key=lambda x: x[1])[0] #low freq with the highest magnitude
-			high_freq = max(high_candidates, key=lambda x: x[1])[0] #high freq w the highest magnitude
-			print(f"Detected frequencies: low={low_freq}, high={high_freq}")
+			# print("low candidates: ", low_candidates)
+			# print("high candidates: ", high_candidates)
+			low_freq = max(low_candidates, key=lambda i: i[1])[0] #low freq with the highest magnitude
+			high_freq = max(high_candidates, key=lambda i: i[1])[0] #high freq w the highest magnitude
+			# print(f"Detected frequencies: low={low_freq}, high={high_freq}")
 
 		# closest matching freqs
 		found_low = find_closest_freq(low_freq, valid_low_freqs)
@@ -132,7 +128,7 @@ def process_wav(fpath_sig_in):
 
 		# compare detected signal to correct signal
 		symbol_val_err = 0
-		if symbol_val != symbol_val_det: symbol_val_err = 1
+		if symbol_val != int(symbol_val_det): symbol_val_err = 1
 
 		# save error signal
 		s2.set('error', n_curr, symbol_val_err)

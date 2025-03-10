@@ -286,4 +286,3 @@ class cpe367_sig_analyzer:
 
 		return True
 
-

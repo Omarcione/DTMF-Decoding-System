@@ -1,11 +1,27 @@
 #!/usr/bin/python
 
 import sys
+from curses.ascii import isdigit
 
 from DFT import DFT, Magnitude
 from cpe367_sig_analyzer import cpe367_sig_analyzer
 from my_fifo import my_fifo as fifo
 
+from collections import Counter
+
+
+def mode_filter(data, window_size=5):
+	smoothed = data[:]
+	half_window = window_size // 2
+
+	for i in range(half_window, len(data) - half_window):
+		window = data[i - half_window: i + half_window + 1]
+		most_common = Counter(window).most_common(1)[0][0]  # Get most frequent value
+		smoothed[i] = most_common
+
+	# smoothed = smoothed[20:] + smoothed[:20]
+
+	return smoothed
 
 ############################################
 ############################################
@@ -40,8 +56,8 @@ def process_wav(fpath_sig_in):
 		1633: (1, 1.626, 0.940, 0.085)
 	}
 
-	N = 32
-	C = 1024
+	N = 6
+	C = 128
 
 	h = {freq: tuple(int(round(i * C)) for i in coeffs) for freq, coeffs in h.items()} #scale to large int
 
@@ -61,6 +77,8 @@ def process_wav(fpath_sig_in):
 	# process input
 	low_freq = 0
 	high_freq = 0
+
+	detections = []
 
 	for n_curr in range(s2.get_len()):
 
@@ -90,7 +108,7 @@ def process_wav(fpath_sig_in):
 		########################
 		# students: combine results from filtering stages
 		#  and find (best guess of) symbol that is present at this sample time
-		if n_curr % (N//4) == 0 and n_curr != 0:
+		if n_curr % (N//3) == 0 and n_curr != 0:
 			Y_DFT = []
 
 			for freq in y.keys():
@@ -114,21 +132,30 @@ def process_wav(fpath_sig_in):
 
 		#freq found
 		symbol_val_det = symbols.get((found_low, found_high)) if (low_freq != 0 and high_freq != 0) else 0
+		symbol_val_det = int(symbol_val_det) if isdigit(symbol_val_det) else 0
+		detections.append(symbol_val_det)
 
-		# save intermediate signals as needed, for plotting
-		#  add signals, as desired!
 		s2.set('sig_1', n_curr, xin)
 		s2.set('sig_2', n_curr, 2 * xin)
 
+	smoothed_detections = mode_filter(detections, window_size=100)
+
+	for n_curr, detection in enumerate(smoothed_detections):
+
+		# save intermediate signals as needed, for plotting
+		#  add signals, as desired!
+
+
 		# save detected symbol
-		s2.set('symbol_det', n_curr, symbol_val_det)
+		# symbol_val_det = int(symbol_val_det) if isdigit(symbol_val_det) else symbol_val_det
+		s2.set('symbol_det', n_curr, detection)
 
 		# get correct symbol (provided within the signal analyzer)
 		symbol_val = s2.get('symbol_val', n_curr)
 
 		# compare detected signal to correct signal
 		symbol_val_err = 0
-		if symbol_val != int(symbol_val_det): symbol_val_err = 1
+		if symbol_val != detection: symbol_val_err = 1
 
 		# save error signal
 		s2.set('error', n_curr, symbol_val_err)
@@ -164,8 +191,8 @@ def main():
 		return False
 
 	# assign file name
-	fpath_sig_in = 'dtmf_signals_slow.txt'
-	# fpath_sig_in = 'dtmf_signals_fast.txt'
+	# fpath_sig_in = 'dtmf_signals_slow.txt'
+	fpath_sig_in = 'dtmf_signals_fast.txt'
 
 	# let's do it!
 	return process_wav(fpath_sig_in)
